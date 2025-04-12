@@ -6,49 +6,48 @@
   <style>
     body {
       font-family: sans-serif;
-      background: #f0f0f0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin: 0;
+      background: #f9f9f9;
+      text-align: center;
       padding: 20px;
     }
 
-    h1 {
+    #score {
       margin-bottom: 10px;
+      font-size: 18px;
     }
 
-    #score {
+    #turn {
       margin-bottom: 20px;
+      font-weight: bold;
     }
 
     #game {
       display: grid;
       grid-template-columns: repeat(4, 100px);
       grid-gap: 10px;
+      justify-content: center;
     }
 
     .card {
       width: 100px;
       height: 100px;
-      background-color: #3498db;
+      background: #3498db;
       color: white;
-      font-size: 36px;
+      font-size: 32px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      border-radius: 10px;
       user-select: none;
-      transition: background-color 0.3s;
     }
 
-    .card.flipped {
-      background-color: #2ecc71;
+    .flipped {
+      background: #2ecc71;
     }
 
-    .card.matched {
-      background-color: #95a5a6;
+    .matched {
+      background: #95a5a6;
       pointer-events: none;
     }
 
@@ -56,28 +55,31 @@
       margin-top: 20px;
       padding: 10px 20px;
       font-size: 16px;
-      cursor: pointer;
     }
   </style>
 </head>
 <body>
   <h1>Memory Game: You vs Robot</h1>
   <div id="score">You: 0 | Robot: 0</div>
+  <div id="turn">Your Turn</div>
   <div id="game"></div>
   <button id="reset" onclick="startGame()">Restart</button>
 
   <script>
     const gameContainer = document.getElementById('game');
     const scoreDisplay = document.getElementById('score');
+    const turnDisplay = document.getElementById('turn');
+
     const totalPairs = 8;
     let cards = [];
     let flipped = [];
-    let matched = [];
+    let matchedCards = [];
     let playerScore = 0;
     let robotScore = 0;
+    let isPlayerTurn = true;
     let lockBoard = false;
 
-    function createShuffledDeck() {
+    function createDeck() {
       const values = Array.from({ length: totalPairs }, (_, i) => i + 1);
       const deck = [...values, ...values];
       return deck.sort(() => Math.random() - 0.5);
@@ -86,21 +88,23 @@
     function startGame() {
       cards = [];
       flipped = [];
-      matched = [];
+      matchedCards = [];
       playerScore = 0;
       robotScore = 0;
+      isPlayerTurn = true;
       lockBoard = false;
+
       updateScore();
-      gameContainer.innerHTML = '';
+      turnDisplay.textContent = "Your Turn";
+      gameContainer.innerHTML = "";
 
-      const shuffled = createShuffledDeck();
-
-      shuffled.forEach(value => {
-        const card = document.createElement('div');
-        card.classList.add('card');
+      const deck = createDeck();
+      deck.forEach(value => {
+        const card = document.createElement("div");
+        card.classList.add("card");
         card.dataset.value = value;
-        card.textContent = '';
-        card.addEventListener('click', () => playerFlip(card));
+        card.textContent = "";
+        card.addEventListener("click", () => handleCardClick(card));
         gameContainer.appendChild(card);
         cards.push(card);
       });
@@ -110,36 +114,27 @@
       scoreDisplay.textContent = `You: ${playerScore} | Robot: ${robotScore}`;
     }
 
-    function playerFlip(card) {
-      if (lockBoard || flipped.length > 0 || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+    function handleCardClick(card) {
+      if (lockBoard || !isPlayerTurn || card.classList.contains("flipped") || card.classList.contains("matched")) return;
 
       flipCard(card);
       flipped.push(card);
-      lockBoard = true;
 
-      setTimeout(() => robotTurn(), 800);
-    }
-
-    function robotTurn() {
-      const available = cards.filter(c => !c.classList.contains('flipped') && !c.classList.contains('matched'));
-      if (available.length === 0) return;
-
-      const card = available[Math.floor(Math.random() * available.length)];
-      flipCard(card);
-      flipped.push(card);
-
-      checkMatch();
+      if (flipped.length === 2) {
+        lockBoard = true;
+        setTimeout(() => checkMatch(), 1000);
+      }
     }
 
     function flipCard(card) {
       card.textContent = card.dataset.value;
-      card.classList.add('flipped');
+      card.classList.add("flipped");
     }
 
     function unflipCards() {
       flipped.forEach(card => {
-        card.textContent = '';
-        card.classList.remove('flipped');
+        card.classList.remove("flipped");
+        card.textContent = "";
       });
       flipped = [];
     }
@@ -147,12 +142,12 @@
     function checkMatch() {
       const [c1, c2] = flipped;
 
-      if (c1.dataset.value === c2.datasetValue || c1.dataset.value === c2.dataset.value) {
-        c1.classList.add('matched');
-        c2.classList.add('matched');
-        matched.push(c1, c2);
+      if (c1.dataset.value === c2.dataset.value) {
+        c1.classList.add("matched");
+        c2.classList.add("matched");
+        matchedCards.push(c1, c2);
 
-        if (flipped[0] === c1) {
+        if (isPlayerTurn) {
           playerScore++;
         } else {
           robotScore++;
@@ -160,26 +155,63 @@
 
         updateScore();
         flipped = [];
+        lockBoard = false;
 
-        if (matched.length === cards.length) {
+        if (matchedCards.length === cards.length) {
           setTimeout(() => {
             let result = "It's a tie!";
             if (playerScore > robotScore) result = "🎉 You win!";
             else if (robotScore > playerScore) result = "🤖 Robot wins!";
             alert(result);
-          }, 500);
+          }, 300);
         } else {
-          lockBoard = false;
+          // Player/Robot gets another turn after match
+          if (!isPlayerTurn) {
+            setTimeout(robotTurn, 800);
+          }
         }
       } else {
         setTimeout(() => {
           unflipCards();
+          isPlayerTurn = !isPlayerTurn;
+          turnDisplay.textContent = isPlayerTurn ? "Your Turn" : "Robot's Turn";
           lockBoard = false;
+
+          if (!isPlayerTurn) {
+            setTimeout(robotTurn, 800);
+          }
         }, 1000);
       }
     }
 
-    // Start the game on load
+    function robotTurn() {
+      if (isPlayerTurn) return;
+
+      const available = cards.filter(card =>
+        !card.classList.contains("flipped") &&
+        !card.classList.contains("matched")
+      );
+
+      if (available.length < 2) return;
+
+      const [card1, card2] = pickTwoRandomCards(available);
+
+      flipCard(card1);
+      flipped.push(card1);
+
+      setTimeout(() => {
+        flipCard(card2);
+        flipped.push(card2);
+        setTimeout(() => checkMatch(), 1000);
+      }, 600);
+    }
+
+    function pickTwoRandomCards(cardArray) {
+      const shuffled = [...cardArray].sort(() => Math.random() - 0.5);
+      return [shuffled[0], shuffled[1]];
+    }
+
+    // Start the game initially
     startGame();
   </script>
 </body>
