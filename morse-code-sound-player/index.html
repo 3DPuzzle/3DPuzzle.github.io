@@ -29,10 +29,10 @@
   <button onclick="playMorse()">Play Morse Code</button>
 
   <script>
-    const dotDuration = 150; // milliseconds
-    const dashDuration = dotDuration * 3;
+    const dotDuration = 400; // milliseconds
+    const dashDuration = dotDuration * 10;
     const symbolPause = dotDuration; // between dots/dashes
-    const letterPause = dotDuration * 3; // between letters
+    const letterPause = dotDuration * 35; // between letters
 
     function playTone(duration) {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
