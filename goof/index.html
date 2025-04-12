@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Morse Code Player</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      max-width: 600px;
+      margin: auto;
+    }
+    textarea {
+      width: 100%;
+      height: 150px;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Morse Code Sound Player</h1>
+  <p>Enter your Morse code below using <strong>.</strong> for dot and <strong>-</strong> for dash. Separate letters with spaces.</p>
+  <textarea id="morseInput" placeholder="Example: .... . .-.. .-.. ---"></textarea>
+  <br>
+  <button onclick="playMorse()">Play Morse Code</button>
+
+  <script>
+    const dotDuration = 150; // milliseconds
+    const dashDuration = dotDuration * 3;
+    const symbolPause = dotDuration; // between dots/dashes
+    const letterPause = dotDuration * 3; // between letters
+
+    function playTone(duration) {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(600, audioCtx.currentTime); // frequency in Hz
+      oscillator.start();
+
+      gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+      oscillator.stop(audioCtx.currentTime + duration / 1000);
+    }
+
+    async function playMorse() {
+      const input = document.getElementById("morseInput").value;
+      const symbols = input.trim().split("");
+
+      for (let i = 0; i < symbols.length; i++) {
+        const symbol = symbols[i];
+
+        if (symbol === ".") {
+          playTone(dotDuration);
+          await sleep(dotDuration + symbolPause);
+        } else if (symbol === "-") {
+          playTone(dashDuration);
+          await sleep(dashDuration + symbolPause);
+        } else if (symbol === " ") {
+          await sleep(letterPause);
+        }
+      }
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+  </script>
+</body>
+</html>
