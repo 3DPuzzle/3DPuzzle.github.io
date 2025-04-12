@@ -66,139 +66,179 @@
       <option value="medium">Medium</option>
       <option value="hard">Hard</option>
     </select>
-    <button id="reset" onclick="startGame()">Start / Restart</button>
+    <button id="reset">Start / Restart</button>
   </div>
   <div id="score">You: 0 | Robot: 0</div>
   <div id="turn">Your Turn</div>
   <div id="game"></div>
 
   <script>
-    const gameContainer = document.getElementById('game');
-    const scoreDisplay = document.getElementById('score');
-    const turnDisplay = document.getElementById('turn');
-    const difficultySelect = document.getElementById('difficulty');
+    window.onload = function () {
+      const gameContainer = document.getElementById('game');
+      const scoreDisplay = document.getElementById('score');
+      const turnDisplay = document.getElementById('turn');
+      const difficultySelect = document.getElementById('difficulty');
+      const resetButton = document.getElementById('reset');
 
-    const totalPairs = 8;
-    let cards = [];
-    let flipped = [];
-    let matchedCards = [];
-    let playerScore = 0;
-    let robotScore = 0;
-    let isPlayerTurn = true;
-    let lockBoard = false;
-    let robotMemory = {}; // key: value, value: card index
+      const totalPairs = 8;
+      let cards = [];
+      let flipped = [];
+      let matchedCards = [];
+      let playerScore = 0;
+      let robotScore = 0;
+      let isPlayerTurn = true;
+      let lockBoard = false;
+      let robotMemory = {};
 
-    function createDeck() {
-      const values = Array.from({ length: totalPairs }, (_, i) => i + 1);
-      const deck = [...values, ...values];
-      return deck.sort(() => Math.random() - 0.5);
-    }
-
-    function startGame() {
-      cards = [];
-      flipped = [];
-      matchedCards = [];
-      playerScore = 0;
-      robotScore = 0;
-      isPlayerTurn = true;
-      lockBoard = false;
-      robotMemory = {};
-
-      updateScore();
-      turnDisplay.textContent = "Your Turn";
-      gameContainer.innerHTML = "";
-
-      const deck = createDeck();
-      deck.forEach(value => {
-        const card = document.createElement("div");
-        card.classList.add("card");
-        card.dataset.value = value;
-        card.textContent = "";
-        card.addEventListener("click", () => handleCardClick(card));
-        gameContainer.appendChild(card);
-        cards.push(card);
-      });
-    }
-
-    function updateScore() {
-      scoreDisplay.textContent = `You: ${playerScore} | Robot: ${robotScore}`;
-    }
-
-    function handleCardClick(card) {
-      if (lockBoard || !isPlayerTurn || card.classList.contains("flipped") || card.classList.contains("matched")) return;
-
-      flipCard(card);
-      flipped.push(card);
-
-      if (flipped.length === 2) {
-        lockBoard = true;
-        setTimeout(() => checkMatch(), 800);
+      function createDeck() {
+        const values = Array.from({ length: totalPairs }, (_, i) => i + 1);
+        const deck = [...values, ...values];
+        return deck.sort(() => Math.random() - 0.5);
       }
-    }
 
-    function flipCard(card) {
-      card.textContent = card.dataset.value;
-      card.classList.add("flipped");
-
-      // Remember for robot
-      if (!card.classList.contains("matched")) {
-        robotMemory[card.dataset.value] = robotMemory[card.dataset.value] || [];
-        if (!robotMemory[card.dataset.value].includes(card)) {
-          robotMemory[card.dataset.value].push(card);
-        }
-      }
-    }
-
-    function unflipCards() {
-      flipped.forEach(card => {
-        card.classList.remove("flipped");
-        card.textContent = "";
-      });
-      flipped = [];
-    }
-
-    function checkMatch() {
-      const [c1, c2] = flipped;
-
-      if (c1.dataset.value === c2.dataset.value) {
-        c1.classList.add("matched");
-        c2.classList.add("matched");
-        matchedCards.push(c1, c2);
-
-        if (isPlayerTurn) playerScore++;
-        else robotScore++;
+      function startGame() {
+        cards = [];
+        flipped = [];
+        matchedCards = [];
+        playerScore = 0;
+        robotScore = 0;
+        isPlayerTurn = true;
+        lockBoard = false;
+        robotMemory = {};
 
         updateScore();
-        flipped = [];
-        lockBoard = false;
+        turnDisplay.textContent = "Your Turn";
+        gameContainer.innerHTML = "";
 
-        if (matchedCards.length === cards.length) {
-          setTimeout(() => {
-            let result = "It's a tie!";
-            if (playerScore > robotScore) result = "🎉 You win!";
-            else if (robotScore > playerScore) result = "🤖 Robot wins!";
-            alert(result);
-          }, 300);
-        } else {
-          // Get another turn
-          if (!isPlayerTurn) {
-            setTimeout(robotTurn, 800);
+        const deck = createDeck();
+        deck.forEach(value => {
+          const card = document.createElement("div");
+          card.classList.add("card");
+          card.dataset.value = value;
+          card.textContent = "";
+          card.addEventListener("click", () => handleCardClick(card));
+          gameContainer.appendChild(card);
+          cards.push(card);
+        });
+      }
+
+      function updateScore() {
+        scoreDisplay.textContent = `You: ${playerScore} | Robot: ${robotScore}`;
+      }
+
+      function handleCardClick(card) {
+        if (lockBoard || !isPlayerTurn || card.classList.contains("flipped") || card.classList.contains("matched")) return;
+
+        flipCard(card);
+        flipped.push(card);
+
+        if (flipped.length === 2) {
+          lockBoard = true;
+          setTimeout(() => checkMatch(), 800);
+        }
+      }
+
+      function flipCard(card) {
+        card.textContent = card.dataset.value;
+        card.classList.add("flipped");
+
+        if (!card.classList.contains("matched")) {
+          robotMemory[card.dataset.value] = robotMemory[card.dataset.value] || [];
+          if (!robotMemory[card.dataset.value].includes(card)) {
+            robotMemory[card.dataset.value].push(card);
           }
         }
-      } else {
-        setTimeout(() => {
-          unflipCards();
+      }
+
+      function unflipCards() {
+        flipped.forEach(card => {
+          card.classList.remove("flipped");
+          card.textContent = "";
+        });
+        flipped = [];
+      }
+
+      function checkMatch() {
+        const [c1, c2] = flipped;
+
+        if (c1.dataset.value === c2.dataset.value) {
+          c1.classList.add("matched");
+          c2.classList.add("matched");
+          matchedCards.push(c1, c2);
+
+          if (isPlayerTurn) playerScore++;
+          else robotScore++;
+
+          updateScore();
           flipped = [];
-          isPlayerTurn = !isPlayerTurn;
-          turnDisplay.textContent = isPlayerTurn ? "Your Turn" : "Robot's Turn";
           lockBoard = false;
 
-          if (!isPlayerTurn) {
-            setTimeout(robotTurn, 800);
+          if (matchedCards.length === cards.length) {
+            setTimeout(() => {
+              let result = "It's a tie!";
+              if (playerScore > robotScore) result = "🎉 You win!";
+              else if (robotScore > playerScore) result = "🤖 Robot wins!";
+              alert(result);
+            }, 300);
+          } else {
+            if (!isPlayerTurn) {
+              setTimeout(robotTurn, 800);
+            }
           }
-        }, 800);
-      }
-    }
+        } else {
+          setTimeout(() => {
+            unflipCards();
+            flipped = [];
+            isPlayerTurn = !isPlayerTurn;
+            turnDisplay.textContent = isPlayerTurn ? "Your Turn" : "Robot's Turn";
+            lockBoard = false;
 
-    function robotTurn() {
-      if (isPlayerTurn)
+            if (!isPlayerTurn) {
+              setTimeout(robotTurn, 800);
+            }
+          }, 800);
+        }
+      }
+
+      function robotTurn() {
+        if (isPlayerTurn) return;
+
+        const difficulty = difficultySelect.value;
+        const available = cards.filter(c => !c.classList.contains("flipped") && !c.classList.contains("matched"));
+
+        let card1, card2;
+
+        if (difficulty === "hard" || difficulty === "medium") {
+          for (const [val, seen] of Object.entries(robotMemory)) {
+            const stillAvailable = seen.filter(c => !c.classList.contains("matched") && !c.classList.contains("flipped"));
+            if (stillAvailable.length >= 2) {
+              [card1, card2] = stillAvailable;
+              break;
+            }
+          }
+        }
+
+        if (!card1 || !card2) {
+          const shuffled = available.sort(() => Math.random() - 0.5);
+          card1 = shuffled[0];
+          card2 = shuffled.find(c => c !== card1);
+        }
+
+        if (!card1 || !card2) return;
+
+        flipCard(card1);
+        flipped.push(card1);
+
+        setTimeout(() => {
+          flipCard(card2);
+          flipped.push(card2);
+          setTimeout(() => checkMatch(), 800);
+        }, 600);
+      }
+
+      resetButton.addEventListener("click", startGame);
+      startGame();
+    };
+  </script>
+</body>
+</html>
