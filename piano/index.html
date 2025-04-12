@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>88-Key Piano</title>
+  <style>
+    body {
+      background: #222;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+    .piano {
+      position: relative;
+      display: flex;
+      user-select: none;
+    }
+    .key {
+      width: 23px;
+      height: 200px;
+      border: 1px solid #000;
+      background: white;
+      box-shadow: inset -1px 0 2px #ccc;
+      z-index: 1;
+      position: relative;
+    }
+    .key.black {
+      width: 14px;
+      height: 120px;
+      background: black;
+      position: absolute;
+      margin-left: -7px;
+      z-index: 2;
+    }
+  </style>
+</head>
+<body>
+  <div class="piano" id="piano"></div>
+
+  <script>
+    const whiteNotes = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+    const blackNoteOffsets = [1, 3, 6, 8, 10]; // semitone offsets from C for black keys in an octave
+    const totalKeys = 88;
+    const startNote = 21; // MIDI note number for A0
+    const piano = document.getElementById('piano');
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playNote(midiNote) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 440 * Math.pow(2, (midiNote - 69) / 12); // MIDI to freq
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.5);
+    }
+
+    function isBlackKey(midiNote) {
+      const noteInOctave = midiNote % 12;
+      return blackNoteOffsets.includes(noteInOctave);
+    }
+
+    for (let midiNote = startNote; midiNote < startNote + totalKeys; midiNote++) {
+      const key = document.createElement('div');
+      const isBlack = isBlackKey(midiNote);
+      key.className = 'key' + (isBlack ? ' black' : '');
+      key.dataset.note = midiNote;
+
+      if (isBlack) {
+        key.style.left = `${(midiNote - startNote) * 23 - 7}px`;
+      }
+
+      key.addEventListener('click', () => playNote(midiNote));
+      piano.appendChild(key);
+    }
+  </script>
+</body>
+</html>
