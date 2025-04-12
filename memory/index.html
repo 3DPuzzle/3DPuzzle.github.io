@@ -11,14 +11,13 @@
       padding: 20px;
     }
 
-    #score {
-      margin-bottom: 10px;
-      font-size: 18px;
+    #controls {
+      margin-bottom: 15px;
     }
 
-    #turn {
-      margin-bottom: 20px;
-      font-weight: bold;
+    #score, #turn {
+      margin-bottom: 10px;
+      font-size: 18px;
     }
 
     #game {
@@ -60,15 +59,24 @@
 </head>
 <body>
   <h1>Memory Game: You vs Robot</h1>
+  <div id="controls">
+    Difficulty:
+    <select id="difficulty">
+      <option value="easy">Easy</option>
+      <option value="medium">Medium</option>
+      <option value="hard">Hard</option>
+    </select>
+    <button id="reset" onclick="startGame()">Start / Restart</button>
+  </div>
   <div id="score">You: 0 | Robot: 0</div>
   <div id="turn">Your Turn</div>
   <div id="game"></div>
-  <button id="reset" onclick="startGame()">Restart</button>
 
   <script>
     const gameContainer = document.getElementById('game');
     const scoreDisplay = document.getElementById('score');
     const turnDisplay = document.getElementById('turn');
+    const difficultySelect = document.getElementById('difficulty');
 
     const totalPairs = 8;
     let cards = [];
@@ -78,6 +86,7 @@
     let robotScore = 0;
     let isPlayerTurn = true;
     let lockBoard = false;
+    let robotMemory = {}; // key: value, value: card index
 
     function createDeck() {
       const values = Array.from({ length: totalPairs }, (_, i) => i + 1);
@@ -93,6 +102,7 @@
       robotScore = 0;
       isPlayerTurn = true;
       lockBoard = false;
+      robotMemory = {};
 
       updateScore();
       turnDisplay.textContent = "Your Turn";
@@ -122,13 +132,21 @@
 
       if (flipped.length === 2) {
         lockBoard = true;
-        setTimeout(() => checkMatch(), 1000);
+        setTimeout(() => checkMatch(), 800);
       }
     }
 
     function flipCard(card) {
       card.textContent = card.dataset.value;
       card.classList.add("flipped");
+
+      // Remember for robot
+      if (!card.classList.contains("matched")) {
+        robotMemory[card.dataset.value] = robotMemory[card.dataset.value] || [];
+        if (!robotMemory[card.dataset.value].includes(card)) {
+          robotMemory[card.dataset.value].push(card);
+        }
+      }
     }
 
     function unflipCards() {
@@ -147,11 +165,8 @@
         c2.classList.add("matched");
         matchedCards.push(c1, c2);
 
-        if (isPlayerTurn) {
-          playerScore++;
-        } else {
-          robotScore++;
-        }
+        if (isPlayerTurn) playerScore++;
+        else robotScore++;
 
         updateScore();
         flipped = [];
@@ -165,7 +180,7 @@
             alert(result);
           }, 300);
         } else {
-          // Player/Robot gets another turn after match
+          // Get another turn
           if (!isPlayerTurn) {
             setTimeout(robotTurn, 800);
           }
@@ -173,6 +188,7 @@
       } else {
         setTimeout(() => {
           unflipCards();
+          flipped = [];
           isPlayerTurn = !isPlayerTurn;
           turnDisplay.textContent = isPlayerTurn ? "Your Turn" : "Robot's Turn";
           lockBoard = false;
@@ -180,39 +196,9 @@
           if (!isPlayerTurn) {
             setTimeout(robotTurn, 800);
           }
-        }, 1000);
+        }, 800);
       }
     }
 
     function robotTurn() {
-      if (isPlayerTurn) return;
-
-      const available = cards.filter(card =>
-        !card.classList.contains("flipped") &&
-        !card.classList.contains("matched")
-      );
-
-      if (available.length < 2) return;
-
-      const [card1, card2] = pickTwoRandomCards(available);
-
-      flipCard(card1);
-      flipped.push(card1);
-
-      setTimeout(() => {
-        flipCard(card2);
-        flipped.push(card2);
-        setTimeout(() => checkMatch(), 1000);
-      }, 600);
-    }
-
-    function pickTwoRandomCards(cardArray) {
-      const shuffled = [...cardArray].sort(() => Math.random() - 0.5);
-      return [shuffled[0], shuffled[1]];
-    }
-
-    // Start the game initially
-    startGame();
-  </script>
-</body>
-</html>
+      if (isPlayerTurn)
