@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Star-Spangled Banner Piano</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 2em;
+      background: #f0f0f0;
+    }
+    select, button {
+      font-size: 1em;
+      padding: 0.5em;
+      margin: 1em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Star-Spangled Banner Piano</h1>
+  <label for="waveType">Select Sound Type:</label>
+  <select id="waveType">
+    <option value="sine">Sine</option>
+    <option value="square">Square</option>
+    <option value="triangle">Triangle</option>
+    <option value="sawtooth">Sawtooth</option>
+  </select>
+  <br/>
+  <button onclick="playSong()">Play Star-Spangled Banner</button>
+
+  <script>
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const context = new AudioContext();
+
+    const noteFrequencies = {
+      'C4': 261.63,
+      'D4': 293.66,
+      'E4': 329.63,
+      'F4': 349.23,
+      'G4': 392.00,
+      'A4': 440.00,
+      'B4': 493.88,
+      'C5': 523.25,
+      'D5': 587.33,
+      'E5': 659.25,
+      'F5': 698.46,
+      'G5': 783.99,
+      'A5': 880.00
+    };
+
+    // Simplified melody: Star-Spangled Banner opening phrase
+    const melody = [
+      { note: 'G4', duration: 500 },
+      { note: 'E5', duration: 500 },
+      { note: 'C5', duration: 500 },
+      { note: 'A4', duration: 500 },
+      { note: 'G4', duration: 500 },
+      { note: 'A4', duration: 500 },
+      { note: 'C5', duration: 1000 },
+      { note: 'E5', duration: 500 },
+      { note: 'D5', duration: 1000 }
+    ];
+
+    function playNote(frequency, duration, waveType) {
+      const oscillator = context.createOscillator();
+      const gainNode = context.createGain();
+
+      oscillator.type = waveType;
+      oscillator.frequency.value = frequency;
+
+      oscillator.connect(gainNode);
+      gainNode.connect(context.destination);
+
+      oscillator.start();
+      gainNode.gain.setValueAtTime(0.2, context.currentTime);
+      oscillator.stop(context.currentTime + duration / 1000);
+    }
+
+    async function playSong() {
+      const waveType = document.getElementById("waveType").value;
+
+      for (let i = 0; i < melody.length; i++) {
+        const { note, duration } = melody[i];
+        playNote(noteFrequencies[note], duration, waveType);
+        await new Promise(resolve => setTimeout(resolve, duration));
+      }
+    }
+  </script>
+</body>
+</html>
