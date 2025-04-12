@@ -2,78 +2,139 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>88-Key Piano</title>
+  <title>Full 88-Key Piano</title>
   <style>
     body {
-      background: #222;
-      display: flex;
-      justify-content: center;
+      background: #111;
+      color: white;
+      font-family: sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    #piano-container {
+      overflow-x: scroll;
+      white-space: nowrap;
       padding: 20px;
     }
+
     .piano {
       position: relative;
-      display: flex;
-      user-select: none;
+      display: inline-block;
     }
+
     .key {
-      width: 23px;
+      display: inline-block;
+      width: 40px;
       height: 200px;
-      border: 1px solid #000;
+      border: 1px solid black;
       background: white;
-      box-shadow: inset -1px 0 2px #ccc;
-      z-index: 1;
       position: relative;
+      z-index: 1;
     }
-    .key.black {
-      width: 14px;
+
+    .black {
+      width: 26px;
       height: 120px;
       background: black;
       position: absolute;
-      margin-left: -7px;
+      margin-left: -13px;
       z-index: 2;
+    }
+
+    .controls {
+      padding: 10px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    textarea {
+      width: 100%;
+      height: 300px;
+      padding: 10px;
+      font-size: 14px;
+      font-family: monospace;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-top: 10px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <div class="piano" id="piano"></div>
+
+  <h1>Full 88-Key Piano</h1>
+  <div id="piano-container"><div class="piano" id="piano"></div></div>
+
+  <div class="controls">
+    <textarea id="sheet" placeholder="Enter your sheet music here...">C4 — 1 beat
+E4 — 1 beat
+G4 — 2 beats
+E4 — 1 beat
+C4 — 1 beat
+E4 — 1 beat
+F4 — 1 beat
+G4 — 2 beats
+</textarea>
+    <br>
+    <button onclick="playSheet()">▶️ Play Song</button>
+  </div>
 
   <script>
-    const whiteNotes = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
-    const blackNoteOffsets = [1, 3, 6, 8, 10]; // semitone offsets from C for black keys in an octave
-    const totalKeys = 88;
-    const startNote = 21; // MIDI note number for A0
-    const piano = document.getElementById('piano');
-
+    const whiteOrder = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+    const blackNotes = ['A#', 'C#', 'D#', 'F#', 'G#'];
+    const noteToMidi = {};
+    const midiToFreq = midi => 440 * Math.pow(2, (midi - 69) / 12);
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-    function playNote(midiNote) {
+    // Generate piano keys from A0 (21) to C8 (108)
+    const piano = document.getElementById('piano');
+    for (let midi = 21; midi <= 108; midi++) {
+      const noteName = getNoteName(midi);
+      noteToMidi[noteName] = midi;
+      const isBlack = noteName.includes('#');
+      const key = document.createElement('div');
+      key.className = 'key' + (isBlack ? ' black' : '');
+      key.dataset.note = midi;
+      key.title = noteName;
+      key.addEventListener('click', () => playNote(midi));
+
+      piano.appendChild(key);
+    }
+
+    function getNoteName(midi) {
+      const names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+      const octave = Math.floor(midi / 12) - 1;
+      return names[midi % 12] + octave;
+    }
+
+    function playNote(midi, duration = 0.5) {
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = 'sine';
-      osc.frequency.value = 440 * Math.pow(2, (midiNote - 69) / 12); // MIDI to freq
+      osc.frequency.setValueAtTime(midiToFreq(midi), audioCtx.currentTime);
       gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
       osc.connect(gain).connect(audioCtx.destination);
       osc.start();
-      osc.stop(audioCtx.currentTime + 0.5);
+      osc.stop(audioCtx.currentTime + duration);
     }
 
-    function isBlackKey(midiNote) {
-      const noteInOctave = midiNote % 12;
-      return blackNoteOffsets.includes(noteInOctave);
-    }
-
-    for (let midiNote = startNote; midiNote < startNote + totalKeys; midiNote++) {
-      const key = document.createElement('div');
-      const isBlack = isBlackKey(midiNote);
-      key.className = 'key' + (isBlack ? ' black' : '');
-      key.dataset.note = midiNote;
-
-      if (isBlack) {
-        key.style.left = `${(midiNote - startNote) * 23 - 7}px`;
+    async function playSheet() {
+      const lines = document.getElementById('sheet').value.split('\n').map(l => l.trim()).filter(Boolean);
+      for (const line of lines) {
+        const [noteRaw, beatRaw] = line.split('—').map(s => s.trim());
+        const note = noteRaw.replace('♯', '#');
+        const beats = parseFloat(beatRaw.replace('beats', '').replace('beat', '').trim());
+        const midi = noteToMidi[note];
+        if (midi) {
+          playNote(midi, 0.5 * beats);
+          await new Promise(r => setTimeout(r, 500 * beats));
+        }
       }
-
-      key.addEventListener('click', () => playNote(midiNote));
-      piano.appendChild(key);
     }
   </script>
 </body>
