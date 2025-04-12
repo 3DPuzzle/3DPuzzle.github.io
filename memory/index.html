@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Memory Game</title>
+  <title>Memory Game vs Robot</title>
   <style>
     body {
       font-family: sans-serif;
@@ -15,6 +15,10 @@
     }
 
     h1 {
+      margin-bottom: 10px;
+    }
+
+    #score {
       margin-bottom: 20px;
     }
 
@@ -57,15 +61,20 @@
   </style>
 </head>
 <body>
-  <h1>Memory Game</h1>
+  <h1>Memory Game: You vs Robot</h1>
+  <div id="score">You: 0 | Robot: 0</div>
   <div id="game"></div>
   <button id="reset" onclick="startGame()">Restart</button>
 
   <script>
     const gameContainer = document.getElementById('game');
+    const scoreDisplay = document.getElementById('score');
     const totalPairs = 8;
     let cards = [];
-    let flippedCards = [];
+    let flipped = [];
+    let matched = [];
+    let playerScore = 0;
+    let robotScore = 0;
     let lockBoard = false;
 
     function createShuffledDeck() {
@@ -76,8 +85,12 @@
 
     function startGame() {
       cards = [];
-      flippedCards = [];
+      flipped = [];
+      matched = [];
+      playerScore = 0;
+      robotScore = 0;
       lockBoard = false;
+      updateScore();
       gameContainer.innerHTML = '';
 
       const shuffled = createShuffledDeck();
@@ -87,48 +100,86 @@
         card.classList.add('card');
         card.dataset.value = value;
         card.textContent = '';
-        card.addEventListener('click', () => flipCard(card));
+        card.addEventListener('click', () => playerFlip(card));
         gameContainer.appendChild(card);
         cards.push(card);
       });
     }
 
-    function flipCard(card) {
-      if (lockBoard || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+    function updateScore() {
+      scoreDisplay.textContent = `You: ${playerScore} | Robot: ${robotScore}`;
+    }
 
+    function playerFlip(card) {
+      if (lockBoard || flipped.length > 0 || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+      flipCard(card);
+      flipped.push(card);
+      lockBoard = true;
+
+      setTimeout(() => robotTurn(), 800);
+    }
+
+    function robotTurn() {
+      const available = cards.filter(c => !c.classList.contains('flipped') && !c.classList.contains('matched'));
+      if (available.length === 0) return;
+
+      const card = available[Math.floor(Math.random() * available.length)];
+      flipCard(card);
+      flipped.push(card);
+
+      checkMatch();
+    }
+
+    function flipCard(card) {
       card.textContent = card.dataset.value;
       card.classList.add('flipped');
-      flippedCards.push(card);
+    }
 
-      if (flippedCards.length === 2) {
-        checkMatch();
-      }
+    function unflipCards() {
+      flipped.forEach(card => {
+        card.textContent = '';
+        card.classList.remove('flipped');
+      });
+      flipped = [];
     }
 
     function checkMatch() {
-      const [card1, card2] = flippedCards;
-      if (card1.dataset.value === card2.dataset.value) {
-        card1.classList.add('matched');
-        card2.classList.add('matched');
-        flippedCards = [];
+      const [c1, c2] = flipped;
 
-        if (document.querySelectorAll('.matched').length === cards.length) {
-          setTimeout(() => alert("🎉 You won!"), 200);
+      if (c1.dataset.value === c2.datasetValue || c1.dataset.value === c2.dataset.value) {
+        c1.classList.add('matched');
+        c2.classList.add('matched');
+        matched.push(c1, c2);
+
+        if (flipped[0] === c1) {
+          playerScore++;
+        } else {
+          robotScore++;
+        }
+
+        updateScore();
+        flipped = [];
+
+        if (matched.length === cards.length) {
+          setTimeout(() => {
+            let result = "It's a tie!";
+            if (playerScore > robotScore) result = "🎉 You win!";
+            else if (robotScore > playerScore) result = "🤖 Robot wins!";
+            alert(result);
+          }, 500);
+        } else {
+          lockBoard = false;
         }
       } else {
-        lockBoard = true;
         setTimeout(() => {
-          card1.textContent = '';
-          card2.textContent = '';
-          card1.classList.remove('flipped');
-          card2.classList.remove('flipped');
-          flippedCards = [];
+          unflipCards();
           lockBoard = false;
         }, 1000);
       }
     }
 
-    // Start the game when page loads
+    // Start the game on load
     startGame();
   </script>
 </body>
