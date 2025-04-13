@@ -6,8 +6,10 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f0f8ff;
+      background: #fdf6ec;
       padding: 20px;
+      max-width: 700px;
+      margin: auto;
     }
 
     h1 {
@@ -16,22 +18,19 @@
 
     .track {
       position: relative;
-      width: 100%;
-      height: 80px;
-      margin-bottom: 30px;
+      height: 60px;
+      margin: 20px 0;
       background: #e0e0e0;
-      border-radius: 20px;
+      border-radius: 30px;
       overflow: hidden;
     }
 
     .dog {
       position: absolute;
-      height: 60px;
-      transition: left 0.3s linear;
-    }
-
-    .dog-img {
-      height: 60px;
+      font-size: 40px;
+      left: 0;
+      top: 10px;
+      transition: left 0.1s linear;
     }
 
     .typing-box {
@@ -41,72 +40,144 @@
     }
 
     .sentence {
-      margin-bottom: 10px;
       font-size: 18px;
+      margin: 10px 0;
     }
 
-    .finished {
+    #winner {
+      font-size: 22px;
+      text-align: center;
+      margin-top: 20px;
       font-weight: bold;
-      color: green;
+    }
+
+    .settings {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: inline-block;
+      margin-right: 10px;
+    }
+
+    input[type="number"], input[type="text"] {
+      padding: 5px;
+      margin-right: 10px;
     }
   </style>
 </head>
 <body>
 
-  <h1>🐶 Typing Dog Race 🐾</h1>
+  <h1>🐕 Typing Dog Race</h1>
 
-  <div class="sentence" id="sentence">The quick brown fox jumps over the lazy dog</div>
-  <input type="text" id="input" class="typing-box" placeholder="Start typing here..." />
+  <div class="settings">
+    <label>Your Name:</label>
+    <input type="text" id="playerName" value="You" />
+    <label>Your WPM:</label>
+    <input type="number" id="playerWPM" value="70" />
+    <button onclick="startRace()">Start Race</button>
+  </div>
 
-  <div class="track"><img src="https://i.imgur.com/UM7ZQ6G.png" class="dog" id="playerDog" style="left: 0;"></div>
-  <div class="track"><img src="https://i.imgur.com/UM7ZQ6G.png" class="dog" id="botDog1" style="left: 0;"></div>
-  <div class="track"><img src="https://i.imgur.com/UM7ZQ6G.png" class="dog" id="botDog2" style="left: 0;"></div>
-  <div class="track"><img src="https://i.imgur.com/UM7ZQ6G.png" class="dog" id="botDog3" style="left: 0;"></div>
+  <div class="sentence" id="sentenceText"></div>
+  <input type="text" id="input" class="typing-box" placeholder="Start typing..." disabled />
+
+  <div class="track"><span class="dog" id="playerDog">🐶</span><span id="playerLabel"></span></div>
+  <div class="track"><span class="dog" id="bot1">🐕</span><span id="bot1Label"></span></div>
+  <div class="track"><span class="dog" id="bot2">🦮</span><span id="bot2Label"></span></div>
+  <div class="track"><span class="dog" id="bot3">🐕‍🦺</span><span id="bot3Label"></span></div>
+
+  <div id="winner"></div>
 
   <script>
     const sentence = "The quick brown fox jumps over the lazy dog";
     const input = document.getElementById("input");
-    const playerDog = document.getElementById("playerDog");
-    const botDogs = [
-      { id: "botDog1", speed: 80 },
-      { id: "botDog2", speed: 60 },
-      { id: "botDog3", speed: 100 }
-    ];
-
-    let startTime;
-    let interval;
-
-    input.addEventListener("focus", startRace);
-
-    input.addEventListener("input", () => {
-      const typed = input.value;
-      const progress = Math.min(typed.length / sentence.length, 1);
-      const raceWidth = document.querySelector(".track").clientWidth - 60;
-      playerDog.style.left = `${progress * raceWidth}px`;
-
-      if (typed === sentence) {
-        clearInterval(interval);
-        input.disabled = true;
-        document.getElementById("sentence").textContent += " - Finished! 🎉";
-        playerDog.classList.add("finished");
-      }
-    });
+    const sentenceText = document.getElementById("sentenceText");
+    sentenceText.textContent = sentence;
+    let bots = [];
+    let raceStarted = false;
+    let finished = [];
 
     function startRace() {
-      if (interval) return; // Prevent multiple races
-      startTime = Date.now();
+      // Reset
+      input.value = "";
+      input.disabled = false;
+      document.getElementById("winner").textContent = "";
+      finished = [];
+      raceStarted = true;
 
-      interval = setInterval(() => {
-        botDogs.forEach(bot => {
-          const botDog = document.getElementById(bot.id);
-          const currentLeft = parseFloat(botDog.style.left || "0");
-          const raceWidth = document.querySelector(".track").clientWidth - 60;
-          const newLeft = currentLeft + bot.speed * 0.016; // update every 16ms
-          if (newLeft < raceWidth) {
-            botDog.style.left = `${newLeft}px`;
+      const playerName = document.getElementById("playerName").value || "You";
+      const playerWPM = parseInt(document.getElementById("playerWPM").value) || 60;
+      const sentenceLength = sentence.split(" ").length;
+
+      const player = {
+        id: "playerDog",
+        name: playerName,
+        wpm: playerWPM,
+        position: 0,
+        done: false
+      };
+
+      // Random bot names
+      const dogNames = ["Max", "Bella", "Charlie"];
+      bots = [1, 2, 3].map((n, i) => ({
+        id: "bot" + n,
+        name: dogNames[i],
+        wpm: playerWPM + (Math.random() * 10 - 5), // +/- 5 WPM
+        position: 0,
+        done: false
+      }));
+
+      // Show names beside dogs
+      document.getElementById("playerLabel").textContent = " " + player.name;
+      bots.forEach(bot => {
+        document.getElementById(bot.id + "Label").textContent = " " + bot.name;
+      });
+
+      const trackWidth = document.querySelector(".track").offsetWidth - 50;
+
+      // Bots move automatically
+      bots.forEach(bot => {
+        const botInterval = setInterval(() => {
+          if (bot.done) return;
+          const wordsPerSecond = bot.wpm / 60;
+          const progress = (bot.position += wordsPerSecond / sentenceLength);
+          const left = Math.min(progress, 1) * trackWidth;
+          document.getElementById(bot.id).style.left = `${left}px`;
+
+          if (progress >= 1 && !bot.done) {
+            bot.done = true;
+            finished.push(bot.name);
+            checkWinner();
+            clearInterval(botInterval);
           }
-        });
-      }, 16);
+        }, 100);
+      });
+
+      // Player types
+      input.focus();
+      const wordsTyped = () => input.value.split(" ").length;
+      const playerDog = document.getElementById(player.id);
+      const updateInterval = setInterval(() => {
+        if (!raceStarted || player.done) return;
+        const progress = input.value.length / sentence.length;
+        const left = Math.min(progress, 1) * trackWidth;
+        playerDog.style.left = `${left}px`;
+
+        if (input.value === sentence) {
+          player.done = true;
+          finished.push(player.name);
+          checkWinner();
+          clearInterval(updateInterval);
+        }
+      }, 100);
+    }
+
+    function checkWinner() {
+      if (finished.length === 4) {
+        document.getElementById("winner").textContent = `🏆 Winner: ${finished[0]}!`;
+        input.disabled = true;
+        raceStarted = false;
+      }
     }
   </script>
 
